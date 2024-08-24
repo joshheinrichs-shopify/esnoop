@@ -17,12 +17,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Subscribe to all event types
+    // Subscribe to specific event types
     es_event_type_t events[] = {
+        ES_EVENT_TYPE_NOTIFY_CREATE,
+        ES_EVENT_TYPE_NOTIFY_RENAME,
+        ES_EVENT_TYPE_NOTIFY_UNLINK,
+        ES_EVENT_TYPE_NOTIFY_CLOSE,
         ES_EVENT_TYPE_NOTIFY_EXEC,
-        ES_EVENT_TYPE_NOTIFY_FORK,
-        ES_EVENT_TYPE_NOTIFY_EXIT,
-        // Add more event types as needed
+        ES_EVENT_TYPE_NOTIFY_MOUNT,
+        ES_EVENT_TYPE_NOTIFY_SETFLAGS
     };
     
     uint32_t event_count = sizeof(events) / sizeof(es_event_type_t);
