@@ -130,8 +130,6 @@ static const event_map_t EVENT_TABLE[] = {
 
 #define NUM_EVENTS (sizeof(EVENT_TABLE) / sizeof(EVENT_TABLE[0]))
 
-static dispatch_queue_t g_event_queue = NULL;
-
 es_event_type_t get_event_type(const char *event_name) {
     for (const event_map_t *event = EVENT_TABLE; event < EVENT_TABLE + NUM_EVENTS; ++event) {
         if (strcmp(event->name, event_name) == 0) {
@@ -148,33 +146,12 @@ void list_events() {
     }
 }
 
-void init_dispatch_queue() {
-	// Choose an appropriate Quality of Service class appropriate for your app.
-	// https://developer.apple.com/documentation/dispatch/dispatchqos
-	dispatch_queue_attr_t queue_attrs = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_CONCURRENT, QOS_CLASS_USER_INITIATED, 0);
-
-	g_event_queue = dispatch_queue_create("event_queue", queue_attrs);
-}
-
-static void handle_auth_worker(es_client_t *client, const es_message_t *msg) {
-    // Auto-approve all AUTH events
-    es_respond_auth_result(client, msg, ES_AUTH_RESULT_ALLOW, true);
-}
-
-
 static void handle_event(es_client_t *client, const es_message_t *msg)
 {
-    if (msg->action_type == ES_ACTION_TYPE_AUTH) {
-        // Note: `es_retain_message` and `es_release_message` are only available in
-        // macOS 11.0 and newer. To run this sample project on macOS 10.15, first
-        // update the deployment target in the project settings, then modify this
-        // function to use the older `es_copy_message` and `es_free_message` APIs.
-        es_retain_message(msg);
-
-        dispatch_async(g_event_queue, ^{
-            handle_auth_worker(client, msg);
-            es_release_message(msg);
-        });
+    if (msg->event_type == ES_EVENT_TYPE_AUTH_OPEN) {
+        es_respond_flags_result(client, msg, 0xffffffff, true);
+    } else if (msg->action_type == ES_ACTION_TYPE_AUTH) {
+        es_respond_auth_result(client, msg, ES_AUTH_RESULT_ALLOW, true);
     }
 }
 
@@ -204,8 +181,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "No valid events specified\n");
         return 1;
     }
-
-    init_dispatch_queue();
 
     // Create a new ES client with a block
     result = es_new_client(&client, ^(es_client_t *c, const es_message_t *msg) {
